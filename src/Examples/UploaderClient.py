@@ -27,16 +27,26 @@ from sys import stdout
 import os
 import hashlib 
 import base64
+from PIL import Image
+
+import StringIO
+
+size = 100,100
 
 if sys.version_info >= (3, 0):
 	raw_input = input
 
-class WhatsappCmdClient:
+class UploaderClient:
 	
-	def __init__(self, phoneNumber, keepAlive = False, sendReceipts = False):
+	def __init__(self, phoneNumber, imagePath, keepAlive = False, sendReceipts = False):
 		self.sendReceipts = sendReceipts
 		self.phoneNumber = phoneNumber
-		self.jid = "%s@s.whatsapp.net" % phoneNumber
+		self.imagePath = imagePath
+
+		if '-' in phoneNumber:
+			self.jid = "%s@g.us" % phoneNumber
+		else:
+			self.jid = "%s@s.whatsapp.net" % phoneNumber		
 		
 		self.sentCache = {}
 		
@@ -78,7 +88,7 @@ class WhatsappCmdClient:
 	def onAuthSuccess(self, username):
 		print("Authed %s" % username)
 		self.methodsInterface.call("ready")
-		self.goInteractive(self.phoneNumber)
+		self.runCommand("/pic "+self.imagePath)
 
 	def onAuthFailed(self, username, err):
 		print("Auth Failed!")
@@ -97,9 +107,9 @@ class WhatsappCmdClient:
 
 	def runCommand(self, command):		
 		splitstr = command.split(' ')
-		if splitstr[0] == "/pic" and len(splitstr) == 2:
+		if splitstr[0] == "/pic" and len(splitstr) == 2:			
 			self.path = splitstr[1]
-
+						
 			if not os.path.isfile(splitstr[1]):
 				print("File %s does not exists" % splitstr[1])
 				return 1
@@ -131,6 +141,8 @@ class WhatsappCmdClient:
 			else:
 				print("Got request MediaReceipt")
 
+			# added by sirpoot
+			self.done = True
 			return 1
 		elif command[0] == "/":
 			command = command[1:].split(' ')
@@ -232,8 +244,27 @@ class WhatsappCmdClient:
 		stdout.flush()
 
 	def doSendImage(self, url):
-		  print("Sending message_image")
-		  statinfo = os.stat(self.path)
-		  name=os.path.basename(self.path)
-		  msgId = self.methodsInterface.call("message_imageSend", (self.jid, url, name,str(statinfo.st_size), "yes"))
-		  self.sentCache[msgId] = [int(time.time()), self.path]
+		print("Sending message_image")
+		statinfo = os.stat(self.path)
+		name=os.path.basename(self.path)
+
+		#im = Image.open("c:\\users\\poot\\desktop\\icon.png")
+		#im.thumbnail(size, Image.ANTIALIAS)
+		
+		#msgId = self.methodsInterface.call("message_imageSend", (self.jid, url, name,str(statinfo.st_size), "yes"))
+		msgId = self.methodsInterface.call("message_imageSend", (self.jid, url, name,str(statinfo.st_size), self.createThumb()))
+		self.sentCache[msgId] = [int(time.time()), self.path]
+
+	
+	def createThumb(self):		
+		THUMBNAIL_SIZE = 64, 64
+		thumbnailFile = "thumb.jpg"
+
+		im = Image.open(self.path)
+		im.thumbnail(THUMBNAIL_SIZE, Image.ANTIALIAS)
+		im.save(thumbnailFile, "JPEG")
+
+		with open(thumbnailFile, "rb") as imageFile:
+			raw = base64.b64encode(imageFile.read())
+
+		return raw;
