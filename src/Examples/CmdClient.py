@@ -19,14 +19,11 @@ CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFT
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 from Yowsup.connectionmanager import YowsupConnectionManager
-import time, datetime, sys
-
 from Yowsup.Media.downloader import MediaDownloader
 from Yowsup.Media.uploader import MediaUploader
+
+import time, datetime, sys, os, hashlib, base64
 from sys import stdout
-import os
-import hashlib 
-import base64
 
 if sys.version_info >= (3, 0):
 	raw_input = input
